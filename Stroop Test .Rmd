@@ -1,0 +1,160 @@
+---
+title: "Stroop Test"
+author: "James Ottavi"
+date: "4/25/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+setwd("/Users/James/Desktop/Data_Analyst_ND/Statistics")
+library(ggplot2)
+library(tidyr)
+library(knitr)
+```
+
+## Summary
+***
+This report investigates the results on an experiment called the *Stroop Test*. This test compares a persons ability to call out the color of the **ink** of two sets of words:
+
+* *Congruent Words* - the word matches the color of the ink.
+* *Incongruent Words* - the word does **not** match the color of the ink.
+
+This analysis involves: identifying the different types of variables; crafting a hypothesis; describing and visualizing the data; and performing a statistical test.
+
+## Methods
+***
+### Independent and Dependent Variables
+Independent variables are variables that are modified by the experimenter, and represent "potential reasons for variation" of the dependent variable. The dependent variables are those whose "variation is being studied."^1^
+
+This experiment deals with two variables: the type of words that were being used, and the response rate (seconds) of the participant in correctly identifying the color of the ink. In this case:
+
+* The **Independent Variable** in this experiment is the type of words that were being used (congruent or incongruent).
+* The **Dependent Variable** in this experiment is the time a participant took in correctly answering the ink color of the presented word (performance).
+
+### Research Question and Hypothesis
+In this experiment, the research question is: Do participants respond faster to congruent or incongruent words? The experiment aims to answer this question through a repeated measures design.
+
+#### Terms
+
+* $\mu_c$: mean population performance of congruent tests
+* $\mu_i$: mean population performance of incongruent tests
+* $\mu_d=\mu_c-\mu_i$: difference between mean congruent and incongruent population performances
+* $\bar{x}_c$: mean sample performance of congruent tests
+* $\bar{x}_i$: mean sample performance of incongruent tests
+* $\bar{x}_d=\bar{x}_c-\bar{x}_i$: difference between mean congruent and incongruent sample performances
+
+#### Hypotheses
+The null hypothesis (H~o~) states that the mean difference () between congruent and incongruent word recognition performance is equal.  
+
+\[
+\begin{eqnarray}
+H_o:\mu_d & = & 0\\
+\end{eqnarray}
+\]
+
+The alternative hypothesis (H~a~) states that the mean difference between congruent and incongruent words is not equal. 
+
+\[
+\begin{eqnarray}
+H_a:\mu_d & \neq & 0\\
+\end{eqnarray}
+\]
+
+####Statistical Methods
+Paired t-tests are used when comparing differences between two conditions on the **same** participant, with the dependent quantitative variable following an approximate normal distribution. In addition, it is assumed that each participant is independent of another participant.^2^ Since the experiment meets all of these qualifications, a paired t-test is used. Because this test is focused on finding whether or not there exists *any* difference between the groups, a two-way paired t-test is used with an $\alpha$ set to 0.05.
+
+## Results
+***
+### Descriptive Statistics
+Descriptive statistics can help give an early indication of how our alternative hypothesis stacks up against the null hypothesis. Below are general summary statistics for both groups.
+```{r stroop_dat, echo=FALSE}
+stroop <- read.csv("stroopdata.csv")
+kable(summary(stroop))
+```
+
+These summary statistics indicate two themes:
+
+1. Both groups mean and median are relatively close to each other, indicating that outliers do not seem to be affecting the data in an extraordinary way.
+2. There is a relatively large difference between the congruent and incongruent groups performance averages and medians, with the congruent group having a better performance (lower response time).
+
+However, summary statistics only give part of the picture. A better picture can be drawn with the inclusion of variability statistics.
+
+``` {r variation, echo=FALSE}
+kable(data.frame(`Congruent SD` = sd(stroop$Congruent),
+      `Incongruent SD` = sd(stroop$Incongruent)))
+```
+
+These statistics indicate that the incongruent group has more variability across data points then the congruent group.
+
+### Visualizations
+Visualizations can also help give us a better understanding for our data before more complex statistical tests. The below plots show the density and frequency distribution of the two conditions using the `ggplot2` module in R.
+
+``` {r plot, echo=FALSE}
+stroop.gather <- gather(stroop,
+                        Group,
+                        Performance,
+                        Congruent,
+                        Incongruent
+                        )
+ggplot(stroop.gather, aes(Performance, fill= Group)) + geom_density(alpha = .3) + labs(title = 'Congruent vs. Incongruent Performance Density Distribution') + coord_cartesian(xlim = c(0, 40)) +  theme_light()
+
+ggplot(stroop.gather, aes(Performance, fill = Group)) + geom_histogram(bins=20) +
+  labs(title = 'Congruent vs. Incongruent Performance Histogram') + coord_cartesian(xlim = c(0, 40)) +  theme_light()
+```
+
+These plots demonstrate that:
+
+1. The performances of both conditions follow an approximately normal distribution, from the density graphs.
+2. There exists a difference in the central location of the most frequent conditions performance metrics, according to the histogram.
+
+### Inferential Statistics
+The paired t-test is able to give a probabilistic explanation of how significant a difference in means is between two conditions on the same group.
+
+#### Difference of Means
+First, the $\bar{x}_d$ is calculated:
+```{r diff}
+xbar.c <- mean(stroop$Congruent)
+xbar.i <- mean(stroop$Incongruent)
+xbar.d <- xbar.c - xbar.i
+print(xbar.d)
+```
+
+In addition, to get a greater idea of how the degree of difference between the two sample means, a *Cohen's d* can be calculated, which gives the magnitude of the difference in terms of standard deviations of the differences. It is calculated by finding the differences of each performance in one group against the other. Then, the average of those differences is taken, and divided by the standard deviation of those differences.
+```{r cohen}
+stroop$diff <- stroop$Congruent - stroop$Incongruent
+n <- length(stroop$diff)
+diff.sd <- sqrt(mean((stroop$diff)^2)/sqrt(n))
+cohen.d <- xbar.d/diff.sd
+print(cohen.d)
+```
+This Cohen's d is relatively large and seemingly significant. To solidify the validity of the Cohen's d assumptions, the t-test is used.
+
+#### T-Statistic and P-Value
+The t-statistic will give the approximate number of stadard deviations away from 0 for the average diffence in performance. The critical t-value in this case, based on this test being two-way and with a $\alpha$ level of 0.05, is $\pm$ `r round(qt(0.975, length(stroop$Congruent)-1), 3)`. This means that if the calculated t-value is beyond the critical value, then the test is significant at the associated $\alpha$ level.
+
+```{r}
+stroop$diff.squared.diff <- (stroop$diff - xbar.d)^2
+sd <- sqrt(sum(stroop$diff.squared.diff)/(n-1))
+t <- xbar.d/(sd/sqrt(n))
+p.value <- dt(t, n-1)
+conf.int <- round(c(xbar.d - 2.069*(sd/sqrt(n)), xbar.d + 2.069*(sd/sqrt(n))), 3)
+kable(data.frame(t, p.value))
+```
+
+## Conclusion
+***
+Based on these results, the t-critical value was reached and the differences between congruent and incongruent results were found to be statistically significant. On average, congruent words are responded to more quickly than incongruent words between a confidence of interval of (`r conf.int`) seconds with 95% confidence.
+
+
+An experiment that has been used to verify these findings was the Numerical Stroop Test. In this test, the numbers are presented to the participant, with congruent numbers being large numbers and large digits (and vice-versa), and incongruent being small numbers and large digits (and vice-versa). Congruent digits were found to be processed faster in this test.^3^
+
+This effect may be observed because our reading speed being close to or moderately faster than our color recognition speed, this is believed to result in a slower response rate and higher error rate for incongruent words (processing speed). Another theory states that is related to processing speed is that semantic word recognition of words is automatically recognized whereas color recognition is not. This automatic response to reading interferes with our ability to recognize color, and therefore makes persons hesitant to respond (automaticity)^3^.
+
+## References
+***
+^1^Independent and Dependent Variables - [Wikipedia](https://en.wikipedia.org/wiki/Dependent_and_independent_variables)
+
+^2^Paired t-test - [Statistics Solutions](http://www.statisticssolutions.com/manova-analysis-paired-sample-t-test/)
+
+^3^Stroop Test - 
+[Wikipedia](https://en.wikipedia.org/wiki/Stroop_effect)
