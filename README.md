@@ -7,4 +7,4 @@ This report investigates the results on an experiment called the *Stroop Test*. 
 * *Congruent Words* - the word matches the color of the ink.
 * *Incongruent Words* - the word does **not** match the color of the ink.
 
-This analysis involves: identifying the different types variables; crafting a hypothesis; describing and visualizing the data; and performing statistical test.
+This analysis involves: identifying the different types variables; crafting a hypothesis; describing and visualizing the data; and performing a statistical test.
